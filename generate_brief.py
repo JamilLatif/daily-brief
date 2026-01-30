@@ -304,6 +304,7 @@ This automated brief covers:
 - Real Estate
 - Hacker News Highlights
 - Regional News (North America, Europe, Asia-Pacific, Middle East & Africa, Latin America)
+- Deep Dive Recommendations
 
 Best regards,
 Your Daily Brief System
@@ -320,9 +321,9 @@ Your Daily Brief System
                        f'attachment; filename=daily_brief_{datetime.now().strftime("%Y%m%d")}.pdf')
         msg.attach(part)
     
-    # Send via Outlook SMTP
+    # Send via Gmail SMTP
     try:
-        server = smtplib.SMTP('smtp-mail.outlook.com', 587)
+        server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
         server.send_message(msg)
