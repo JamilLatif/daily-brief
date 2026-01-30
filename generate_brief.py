@@ -26,9 +26,29 @@ EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
 RECIPIENT_EMAIL = os.environ.get('RECIPIENT_EMAIL', 'jamil.latif@hotmail.co.uk')
 
-def search_news(client, query, max_results=5):
+def search_news(client, query, max_results=5, section_type="general"):
     """Search for news using Claude with web search."""
     try:
+        # Customize instructions based on section type
+        format_instructions = """
+Format each story with clear separation:
+
+[Priority indicator if breaking/urgent: 🔴 for urgent, ⚡ for breaking]
+**Title** [Source]
+Brief summary (1-2 sentences)
+→ Why this matters: One-line context explaining significance
+
+[Blank line between stories]
+
+Only include stories if they're genuinely important. Better to have 1-2 great stories than force 3 mediocre ones.
+For priority indicators:
+- Use 🔴 for urgent stories requiring immediate attention
+- Use ⚡ for breaking news in the past few hours
+- No indicator for standard important news
+
+Important: Add a blank line (use two line breaks) between each story for readability.
+"""
+        
         message = client.messages.create(
             model="claude-sonnet-4-20250514",
             max_tokens=4000,
@@ -38,7 +58,7 @@ def search_news(client, query, max_results=5):
             }],
             messages=[{
                 "role": "user",
-                "content": f"{query}\n\nProvide {max_results} of the most important and newsworthy stories. Focus on stories that are moving the needle, not fluff. Be concise but informative. Format each story as: **Title**: Brief summary (1-2 sentences)."
+                "content": f"{query}\n\n{format_instructions}"
             }]
         )
         
@@ -103,6 +123,37 @@ def generate_brief():
         fontName='Helvetica-Bold'
     )
     
+    # Color-coded section styles
+    tech_section_style = ParagraphStyle(
+        'TechSection',
+        parent=section_style,
+        textColor='#0066cc',  # Blue for Tech
+    )
+    
+    finance_section_style = ParagraphStyle(
+        'FinanceSection',
+        parent=section_style,
+        textColor='#00a86b',  # Green for Finance
+    )
+    
+    realestate_section_style = ParagraphStyle(
+        'RealEstateSection',
+        parent=section_style,
+        textColor='#ff6b35',  # Orange for Real Estate
+    )
+    
+    hn_section_style = ParagraphStyle(
+        'HNSection',
+        parent=section_style,
+        textColor='#ff6600',  # HN Orange
+    )
+    
+    regional_section_style = ParagraphStyle(
+        'RegionalSection',
+        parent=section_style,
+        textColor='#6b4c9a',  # Purple for Regional
+    )
+    
     content_style = ParagraphStyle(
         'Content',
         parent=styles['Normal'],
@@ -121,43 +172,44 @@ def generate_brief():
     story.append(Spacer(1, 0.1*inch))
     
     print("Searching AI & Technology news...")
-    story.append(Paragraph("ARTIFICIAL INTELLIGENCE & TECHNOLOGY", section_style))
+    story.append(Paragraph("ARTIFICIAL INTELLIGENCE & TECHNOLOGY", tech_section_style))
     ai_tech_news = search_news(client, 
-        "Search for the top 3 most important AI and technology news stories from the past 24 hours. "
+        "Search for the most important AI and technology news stories from the past 24 hours (aim for 2-3 stories, but only include if genuinely significant). "
         "Focus on: new AI model releases, major tech company announcements, AI policy/regulation, "
-        "breakthrough research, significant product launches, or major industry shifts.",
-        max_results=3)
+        "breakthrough research, significant product launches, or major industry shifts. "
+        "Quality over quantity - skip if nothing important happened.",
+        max_results=3, section_type="tech")
     story.append(Paragraph(ai_tech_news, content_style))
     story.append(Spacer(1, 0.15*inch))
     
     print("Searching Finance news...")
-    story.append(Paragraph("FINANCE & MARKETS", section_style))
+    story.append(Paragraph("FINANCE & MARKETS", finance_section_style))
     finance_news = search_news(client,
-        "Search for the top 3 most important financial and market news stories from the past 24 hours. "
+        "Search for the most important financial and market news stories from the past 24 hours (aim for 2-3 stories, but only include if genuinely significant). "
         "Focus on: major market movements, Federal Reserve or central bank decisions, significant "
         "corporate earnings or announcements, economic policy changes, crypto developments, or major "
-        "sector shifts.",
-        max_results=3)
+        "sector shifts. Quality over quantity.",
+        max_results=3, section_type="finance")
     story.append(Paragraph(finance_news, content_style))
     story.append(Spacer(1, 0.15*inch))
     
     print("Searching Real Estate news...")
-    story.append(Paragraph("REAL ESTATE", section_style))
+    story.append(Paragraph("REAL ESTATE", realestate_section_style))
     real_estate_news = search_news(client,
-        "Search for the top 3 most important real estate news stories from the past 24 hours. "
+        "Search for the most important real estate news stories from the past 24 hours (aim for 2-3 stories, but only include if genuinely significant). "
         "Focus on: residential and commercial real estate markets, major policy changes, significant "
-        "transactions, market trend shifts, or regulatory developments.",
-        max_results=3)
+        "transactions, market trend shifts, or regulatory developments. Quality over quantity.",
+        max_results=3, section_type="realestate")
     story.append(Paragraph(real_estate_news, content_style))
     story.append(Spacer(1, 0.15*inch))
     
     print("Searching HackerNews top stories...")
-    story.append(Paragraph("HACKER NEWS HIGHLIGHTS", section_style))
+    story.append(Paragraph("HACKER NEWS HIGHLIGHTS", hn_section_style))
     hn_news = search_news(client,
-        "Search for the top stories on Hacker News from the past 24 hours. "
+        "Search for the top stories on Hacker News from the past 24 hours (aim for 2-3 stories, but only include if genuinely interesting). "
         "Focus on the most interesting technical discussions, product launches, or thought-provoking "
-        "articles. Avoid 'Show HN' posts unless exceptionally noteworthy. Pick 2-3 stories.",
-        max_results=3)
+        "articles. Avoid 'Show HN' posts unless exceptionally noteworthy. Quality over quantity.",
+        max_results=3, section_type="hackernews")
     story.append(Paragraph(hn_news, content_style))
     story.append(Spacer(1, 0.15*inch))
     
@@ -188,10 +240,36 @@ def generate_brief():
     
     for region_name, region_query in regions:
         print(f"Searching {region_name} news...")
-        story.append(Paragraph(region_name, section_style))
-        region_news = search_news(client, region_query, max_results=3)
+        story.append(Paragraph(region_name, regional_section_style))
+        # Add quality over quantity to query
+        enhanced_query = region_query.replace("2-3 needle-moving", "needle-moving (aim for 2-3 but only if genuinely significant)")
+        enhanced_query += " Quality over quantity."
+        region_news = search_news(client, enhanced_query, max_results=3, section_type="regional")
         story.append(Paragraph(region_news, content_style))
         story.append(Spacer(1, 0.15*inch))
+    
+    # Deep Dive Recommendations
+    print("Generating deep dive recommendations...")
+    story.append(Spacer(1, 0.2*inch))
+    deepdive_style = ParagraphStyle(
+        'DeepDiveSection',
+        parent=section_style,
+        textColor='#d4af37',  # Gold color for emphasis
+    )
+    story.append(Paragraph("RECOMMENDED DEEP DIVES", deepdive_style))
+    
+    deepdive_query = """Based on all the news stories from today, identify 1-2 stories that are particularly worth reading the full articles on. 
+    These should be stories that:
+    - Have significant long-term implications
+    - Are complex enough to benefit from deeper reading
+    - Represent important trends or turning points
+    
+    Format as:
+    **Story Title** [Source with link if available]
+    Why read the full article: One sentence explaining why this deserves deeper attention."""
+    
+    deepdive_news = search_news(client, deepdive_query, max_results=2, section_type="deepdive")
+    story.append(Paragraph(deepdive_news, content_style))
     
     # Build PDF
     print("Building PDF document...")
