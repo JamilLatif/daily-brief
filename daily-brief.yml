@@ -2,8 +2,8 @@ name: Daily Brief Generator
 
 on:
   schedule:
-    # Run at 7:00 AM GMT every day
-    - cron: '0 7 * * *'
+    # Run at 7:00 AM GMT on Monday, Wednesday, and Friday
+    - cron: '0 7 * * 1,3,5'
   workflow_dispatch: # Allows manual triggering for testing
 
 jobs:
