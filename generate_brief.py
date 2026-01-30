@@ -85,6 +85,24 @@ def generate_brief():
     
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     today = datetime.now().strftime("%B %d, %Y")
+    day_of_week = datetime.now().strftime("%A")
+    
+    # Calculate time range based on day of week (Mon/Wed/Fri schedule)
+    if day_of_week == "Monday":
+        time_range = "since Friday (past 3 days)"
+        days_covered = 3
+    elif day_of_week == "Wednesday":
+        time_range = "since Monday (past 2 days)"
+        days_covered = 2
+    elif day_of_week == "Friday":
+        time_range = "since Wednesday (past 2 days)"
+        days_covered = 2
+    else:
+        # Fallback for manual runs on other days
+        time_range = "from the past 24 hours"
+        days_covered = 1
+    
+    print(f"Generating brief for {day_of_week}, covering news {time_range}")
     
     # Generate PDF
     pdf_filename = f"/tmp/daily_brief_{datetime.now().strftime('%Y%m%d')}.pdf"
@@ -174,7 +192,7 @@ def generate_brief():
     print("Searching AI & Technology news...")
     story.append(Paragraph("ARTIFICIAL INTELLIGENCE & TECHNOLOGY", tech_section_style))
     ai_tech_news = search_news(client, 
-        "Search for the most important AI and technology news stories from the past 24 hours (aim for 2-3 stories, but only include if genuinely significant). "
+        f"Search for the most important AI and technology news stories {time_range} (aim for 2-3 stories, but only include if genuinely significant). "
         "Focus on: new AI model releases, major tech company announcements, AI policy/regulation, "
         "breakthrough research, significant product launches, or major industry shifts. "
         "Quality over quantity - skip if nothing important happened.",
@@ -185,7 +203,7 @@ def generate_brief():
     print("Searching Finance news...")
     story.append(Paragraph("FINANCE & MARKETS", finance_section_style))
     finance_news = search_news(client,
-        "Search for the most important financial and market news stories from the past 24 hours (aim for 2-3 stories, but only include if genuinely significant). "
+        f"Search for the most important financial and market news stories {time_range} (aim for 2-3 stories, but only include if genuinely significant). "
         "Focus on: major market movements, Federal Reserve or central bank decisions, significant "
         "corporate earnings or announcements, economic policy changes, crypto developments, or major "
         "sector shifts. Quality over quantity.",
@@ -196,21 +214,11 @@ def generate_brief():
     print("Searching Real Estate news...")
     story.append(Paragraph("REAL ESTATE", realestate_section_style))
     real_estate_news = search_news(client,
-        "Search for the most important real estate news stories from the past 24 hours (aim for 2-3 stories, but only include if genuinely significant). "
+        f"Search for the most important real estate news stories {time_range} (aim for 2-3 stories, but only include if genuinely significant). "
         "Focus on: residential and commercial real estate markets, major policy changes, significant "
         "transactions, market trend shifts, or regulatory developments. Quality over quantity.",
         max_results=3, section_type="realestate")
     story.append(Paragraph(real_estate_news, content_style))
-    story.append(Spacer(1, 0.15*inch))
-    
-    print("Searching HackerNews top stories...")
-    story.append(Paragraph("HACKER NEWS HIGHLIGHTS", hn_section_style))
-    hn_news = search_news(client,
-        "Search for the top stories on Hacker News from the past 24 hours (aim for 2-3 stories, but only include if genuinely interesting). "
-        "Focus on the most interesting technical discussions, product launches, or thought-provoking "
-        "articles. Avoid 'Show HN' posts unless exceptionally noteworthy. Quality over quantity.",
-        max_results=3, section_type="hackernews")
-    story.append(Paragraph(hn_news, content_style))
     story.append(Spacer(1, 0.15*inch))
     
     # Regional News
@@ -241,8 +249,9 @@ def generate_brief():
     for region_name, region_query in regions:
         print(f"Searching {region_name} news...")
         story.append(Paragraph(region_name, regional_section_style))
-        # Add quality over quantity to query
-        enhanced_query = region_query.replace("2-3 needle-moving", "needle-moving (aim for 2-3 but only if genuinely significant)")
+        # Update time range and add quality over quantity to query
+        enhanced_query = region_query.replace("in the past 24 hours", time_range)
+        enhanced_query = enhanced_query.replace("2-3 needle-moving", "needle-moving (aim for 2-3 but only if genuinely significant)")
         enhanced_query += " Quality over quantity."
         region_news = search_news(client, enhanced_query, max_results=3, section_type="regional")
         story.append(Paragraph(region_news, content_style))
@@ -258,7 +267,7 @@ def generate_brief():
     )
     story.append(Paragraph("RECOMMENDED DEEP DIVES", deepdive_style))
     
-    deepdive_query = """Based on all the news stories from today, identify 1-2 stories that are particularly worth reading the full articles on. 
+    deepdive_query = f"""Based on all the news stories {time_range}, identify 1-2 stories that are particularly worth reading the full articles on. 
     These should be stories that:
     - Have significant long-term implications
     - Are complex enough to benefit from deeper reading
